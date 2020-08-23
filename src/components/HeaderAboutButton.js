@@ -25,17 +25,19 @@ const HeaderAboutButton = () => {
 				containerStyle={styles.buttonContainer}
 				onPress={toggleModal}
 			/>
-			<Modal
-				isVisible={modalVisible}
-				onBackButtonPress={toggleModal}
-				onBackdropPress={toggleModal}>
-				<View style={[styles.container]}>
-					<Text style={[styles.title]}>Thông tin</Text>
-					<Divider style={styles.divider} />
-					<AboutComponent style={styles.about} />
-					<Button title="Đóng" onPress={toggleModal} />
-				</View>
-			</Modal>
+			{modalVisible && (
+				<Modal
+					isVisible={modalVisible}
+					onBackButtonPress={toggleModal}
+					onBackdropPress={toggleModal}>
+					<View style={[styles.container]}>
+						<Text style={[styles.title]}>Thông tin</Text>
+						<Divider style={styles.divider} />
+						<AboutComponent style={styles.about} />
+						<Button title="Đóng" onPress={toggleModal} />
+					</View>
+				</Modal>
+			)}
 		</>
 	);
 };

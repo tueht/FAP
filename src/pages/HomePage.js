@@ -179,6 +179,7 @@ const HomePage = ({navigation}) => {
 			renderItem={renderItem}
 			renderSectionHeader={renderSectionHeader}
 			renderSectionFooter={renderNoContent}
+			showsVerticalScrollIndicator={false}
 		/>
 	);
 };
