@@ -9,6 +9,7 @@ import _ from 'lodash';
 
 import {login} from '../state/auth';
 import sharedStyles from '../styles';
+import AboutComponent from '../components/AboutComponent';
 
 const CAMPS = [
 	{
@@ -143,18 +144,7 @@ const LoginPage = () => {
 				{renderForm}
 			</Formik>
 
-			<View style={{marginTop: 22}}>
-				<Text style={{color: '#666'}}>
-					Lưu ý: Ứng dụng này không phải của trường ĐH FPT, mình làm ứng dụng
-					này vì muốn bố mẹ mình có thể theo bước học hành của em trai mình tốt
-					hơn.
-				</Text>
-				<Text style={{color: '#666', marginTop: 8}}>
-					Tất cả mọi dữ liệu đều được lưu trữ tại điện thoại của bạn và sẽ không
-					gửi đến bất cứ đâu(ngoài trang FAP(http://fap.fpt.edu.vn) của trường
-					ĐH FPT).
-				</Text>
-			</View>
+			<AboutComponent style={{marginTop: 22}} />
 		</ScrollView>
 	);
 };

@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useLayoutEffect} from 'react';
 import {View, SectionList, StyleSheet} from 'react-native';
 import {Text, Icon} from 'react-native-elements';
 import {useSelector, useDispatch} from 'react-redux';
@@ -7,6 +7,7 @@ import Ripple from 'react-native-material-ripple';
 import PageLoadingComponent from '../components/PageLoadingComponent';
 import {fetchStudentProfile} from '../state/data';
 import sharedStyles from '../styles';
+import HeaderAboutButton from '../components/HeaderAboutButton';
 
 const HomePage = ({navigation}) => {
 	const dispatch = useDispatch();
@@ -15,6 +16,12 @@ const HomePage = ({navigation}) => {
 	useEffect(() => {
 		dispatch(fetchStudentProfile());
 	}, [dispatch]);
+
+	useLayoutEffect(() => {
+		navigation.setOptions({
+			headerRight: () => <HeaderAboutButton />,
+		});
+	}, [navigation]);
 
 	if (student.loading) {
 		return <PageLoadingComponent numOfRows={3} />;
