@@ -33,6 +33,15 @@ const parseAttendanceStatus = ($, element, slotIndex) => {
 			slot: slotIndex,
 		};
 	}
+	const tmp = text.split('(Chưa học)');
+	if (tmp.length > 1) {
+		return {
+			status: 'Chưa học',
+			subject: tmp[0].trim(),
+			slot: slotIndex,
+			time: tmp[1].replace('(', '').replace(')', '').trim(),
+		};
+	}
 	const index = text.lastIndexOf('(');
 	const status = text.slice(index);
 	return {
@@ -66,10 +75,7 @@ const parseSchedulePage = (html) => {
 		.fill(0)
 		.map((__, index) => {
 			return {
-				date: startOfWeek
-					.clone()
-					.add(index + 1, 'd')
-					.format(),
+				date: startOfWeek.clone().add(index, 'd').format(),
 				slots: slots.map((d) => d[index]),
 			};
 		});

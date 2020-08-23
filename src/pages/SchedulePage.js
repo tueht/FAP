@@ -56,6 +56,7 @@ const SchedulePage = () => {
 					<View style={[sharedStyles.tag, statusStyles.container]}>
 						<Text>{item.status}</Text>
 					</View>
+					{!!item.time && <Text style={[styles.time]}>{item.time}</Text>}
 				</View>
 			</View>
 		);
@@ -133,6 +134,11 @@ const styles = StyleSheet.create({
 	},
 	notTaken: {
 		backgroundColor: '#ccc',
+	},
+	time: {
+		textAlign: 'center',
+		marginTop: 3,
+		color: '#555',
 	},
 });
 
