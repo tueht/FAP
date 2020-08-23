@@ -1,5 +1,5 @@
 import React, {useEffect} from 'react';
-import {View, SectionList, StyleSheet, SafeAreaView} from 'react-native';
+import {View, SectionList, StyleSheet} from 'react-native';
 import {Text, Icon} from 'react-native-elements';
 import {useSelector, useDispatch} from 'react-redux';
 import Ripple from 'react-native-material-ripple';
@@ -166,22 +166,17 @@ const HomePage = ({navigation}) => {
 	};
 
 	return (
-		<SafeAreaView style={styles.container}>
-			<SectionList
-				sections={data}
-				keyExtractor={(item, index) => (item.label || item.title) + index}
-				renderItem={renderItem}
-				renderSectionHeader={renderSectionHeader}
-				renderSectionFooter={renderNoContent}
-			/>
-		</SafeAreaView>
+		<SectionList
+			sections={data}
+			keyExtractor={(item, index) => (item.label || item.title) + index}
+			renderItem={renderItem}
+			renderSectionHeader={renderSectionHeader}
+			renderSectionFooter={renderNoContent}
+		/>
 	);
 };
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-	},
 	row: {
 		marginTop: 12,
 	},
@@ -189,8 +184,9 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 12,
 	},
 	profile: {
-		fontSize: 18,
+		fontSize: 19,
 		lineHeight: 28,
+		color: '#222',
 	},
 	profileRow: {
 		flexDirection: 'row',

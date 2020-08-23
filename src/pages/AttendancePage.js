@@ -214,6 +214,7 @@ const AttendancePage = () => {
 				renderSectionFooter={renderNoContent}
 				ListHeaderComponent={renderHeader}
 				renderSectionHeader={renderSectionHeader}
+				keyboardShouldPersistTaps="handled"
 			/>
 		</SafeAreaView>
 	);
