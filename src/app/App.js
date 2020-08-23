@@ -7,6 +7,7 @@ import {CODE_PUSH_DEPLOYMENT_KEY} from '@env';
 
 import configureStore from '../state/configureStore';
 import AppRouter from './AppRouter';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 const {store, persistor} = configureStore();
 
@@ -14,7 +15,9 @@ const App = () => {
 	return (
 		<Provider store={store}>
 			<PersistGate loading={null} persistor={persistor}>
-				<AppRouter />
+				<ErrorBoundary>
+					<AppRouter />
+				</ErrorBoundary>
 			</PersistGate>
 		</Provider>
 	);
