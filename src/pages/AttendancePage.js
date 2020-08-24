@@ -158,28 +158,35 @@ const AttendancePage = () => {
 						</View>
 					)}
 				/>
-				<Dropdown
-					data={courses}
-					dropdownPosition={1}
-					fontSize={18}
-					labelExtractor={(item) => item.name}
-					valueExtractor={(item) => item.name}
-					value={currentCourse?.name}
-					label="Chọn môn học:"
-					onChangeText={(v, index) => {
-						setCourse(courses[index]);
-					}}
-					renderBase={({title, label}) => (
-						<View style={[styles.courseDropdown]}>
-							<Text style={[styles.dropdownLabel]}>{label}</Text>
-							<View style={sharedStyles.dropdownContentContainer}>
-								<Text style={[styles.dropdownValue]}>{title}</Text>
-								<Icon type="antdesign" name="down" size={18} color="#666" />
+				{courses?.length === 0 ? (
+					<Text style={[styles.noCourseText]}>
+						Kỳ học {currentTerm?.name || 'này'} không có môn học nào, vui lòng
+						chọn kỳ học khác.
+					</Text>
+				) : (
+					<Dropdown
+						data={courses}
+						dropdownPosition={1}
+						fontSize={18}
+						labelExtractor={(item) => item.name}
+						valueExtractor={(item) => item.name}
+						value={currentCourse?.name}
+						label="Chọn môn học:"
+						onChangeText={(v, index) => {
+							setCourse(courses[index]);
+						}}
+						renderBase={({title, label}) => (
+							<View style={[styles.courseDropdown]}>
+								<Text style={[styles.dropdownLabel]}>{label}</Text>
+								<View style={sharedStyles.dropdownContentContainer}>
+									<Text style={[styles.dropdownValue]}>{title}</Text>
+									<Icon type="antdesign" name="down" size={18} color="#666" />
+								</View>
+								<View style={sharedStyles.dropdownDivider} />
 							</View>
-							<View style={sharedStyles.dropdownDivider} />
-						</View>
-					)}
-				/>
+						)}
+					/>
+				)}
 			</View>
 		);
 	};
@@ -291,6 +298,13 @@ const styles = StyleSheet.create({
 	},
 	futureHeader: {
 		backgroundColor: '#b3e5fc',
+	},
+	noCourseText: {
+		color: '#888',
+		paddingTop: 20,
+		paddingBottom: 12,
+		paddingHorizontal: 4,
+		textAlign: 'center',
 	},
 });
 

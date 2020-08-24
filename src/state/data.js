@@ -113,7 +113,7 @@ async function attendancePayloadCreator(
 		params.course = data.courseId;
 	}
 	const url = `${apiEndpoint}${qs.stringify(params, {addQueryPrefix: true})}`;
-	console.log('url', url);
+	// console.log('url', url);
 	const response = await axios.get(url, {
 		headers: {
 			Cookie: cookie,
