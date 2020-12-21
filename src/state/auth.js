@@ -8,22 +8,30 @@ import {persistReducer} from 'redux-persist';
 import axios, {defaultHeaders} from '../utils/axios';
 import {LOGIN_ENDPOINT} from '../utils/api';
 
-function extractPageState(html) {
+export function extractPageState(html) {
 	let $ = cheerio.load(html);
 	return {
 		__VIEWSTATE: $('#__VIEWSTATE').attr('value'),
 		__VIEWSTATEGENERATOR: $('#__VIEWSTATEGENERATOR').attr('value'),
 		__EVENTVALIDATION: $('#__EVENTVALIDATION').attr('value'),
+		__LASTFOCUS: $('#__LASTFOCUS').attr('value'),
+		__EVENTARGUMENT: $('#__EVENTARGUMENT').attr('value'),
+		// __EVENTTARGET: 'ctl00$mainContent$dllCampus',
 	};
 }
 
-function getAuthStatus(html) {
-	let $ = cheerio.load(html);
-	return $('#ctl00_mainContent_lblError').text().trim();
-}
+// function getAuthStatus(html) {
+// 	let $ = cheerio.load(html);
+// 	return $('#ctl00_mainContent_lblError').text().trim();
+// }
 
-function isValidAuthStatus(status) {
-	return status.includes('System.NullReferenceException: Object');
+function isValidAuthStatus(html, studentNo) {
+	let $ = cheerio.load(html);
+	const errorMessage = $('#ctl00_mainContent_lblError').text().trim();
+	return (
+		errorMessage?.includes('System.NullReferenceException: Object reference') ||
+		$('#ctl00_lblLogIn').text().trim() === studentNo
+	);
 }
 
 const login = createAsyncThunk('auth/login', async (userInfo, thunkAPI) => {
@@ -33,7 +41,7 @@ const login = createAsyncThunk('auth/login', async (userInfo, thunkAPI) => {
 		ctl00$mainContent$txtUser: userInfo.studentNo,
 		ctl00$mainContent$txtPass: userInfo.password,
 		ctl00$mainContent$btLogin: 'Đăng nhập',
-		ctl00$mainContent$chkRemember: true,
+		// ctl00$mainContent$chkRemember: true,
 	};
 	return fetch(LOGIN_ENDPOINT, {
 		headers: defaultHeaders,
@@ -55,11 +63,12 @@ const login = createAsyncThunk('auth/login', async (userInfo, thunkAPI) => {
 				},
 			});
 		})
-		.then(async (loginPage) => {
+		.then((loginPage) => {
 			const html = loginPage.data;
-			const authStatus = getAuthStatus(html);
-			if (!isValidAuthStatus(authStatus)) {
-				throw new Error(authStatus);
+			if (!isValidAuthStatus(html, userInfo.studentNo)) {
+				throw new Error(
+					`Sai cơ sở, mã sinh viên hoặc mật khẩu, vui lòng thử lại.`,
+				);
 			}
 			const formData = {
 				...extractPageState(html),
@@ -74,9 +83,10 @@ const login = createAsyncThunk('auth/login', async (userInfo, thunkAPI) => {
 		})
 		.then(async (loginPage) => {
 			const html = loginPage.data;
-			const authStatus = getAuthStatus(html);
-			if (!isValidAuthStatus(authStatus)) {
-				throw new Error(authStatus);
+			if (!isValidAuthStatus(html, userInfo.studentNo)) {
+				throw new Error(
+					`Sai cơ sở, mã sinh viên hoặc mật khẩu, vui lòng thử lại.`,
+				);
 			}
 			const formData = {
 				...extractPageState(html),
@@ -96,6 +106,7 @@ const login = createAsyncThunk('auth/login', async (userInfo, thunkAPI) => {
 });
 
 const logout = createAction('auth/logout');
+const updatePageState = createAction('auth/updatePageState');
 
 const authSlice = createSlice({
 	name: 'auth',
@@ -106,6 +117,9 @@ const authSlice = createSlice({
 	extraReducers: {
 		[logout]: (state, action) => {
 			state.cookie = null;
+		},
+		[updatePageState]: (state, action) => {
+			state.pageState = action.payload;
 		},
 
 		[login.pending]: (state, action) => {
@@ -129,7 +143,7 @@ const authSlice = createSlice({
 	},
 });
 
-export {login, logout};
+export {login, logout, updatePageState};
 
 const sensitiveStorage = createSensitiveStorage({
 	keychainService: 'myKeychain',

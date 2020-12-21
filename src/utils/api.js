@@ -15,6 +15,6 @@ export const PARENT_ATTENDANCE_ENDPOINT =
 
 export const PARENT_TRANSCRIPT_DETAILS_ENDPOINT =
 	API_URI_ROOT + 'Phuhuynh/StudentGrade_Donor.aspx';
-export const NEW_ENDPOINT = API_URI_ROOT + 'CmsFAP/NewsDetail.aspx';
+export const NEW_ENDPOINT = API_URI_ROOT + 'Phuhuynh/NewsDetailDn.aspx';
 
 export {};

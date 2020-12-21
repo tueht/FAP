@@ -3,7 +3,7 @@ import _ from 'lodash';
 import qs from 'qs';
 
 import axios from '../utils/axios';
-import {logout} from './auth';
+import {logout, updatePageState, extractPageState} from './auth';
 
 import {
 	PARENTS_ENDPOINT,
@@ -11,7 +11,7 @@ import {
 	PARENT_TUITION_FEE_ENDPOINT,
 	PARENT_TOTAL_TRANSCRIPT_ENDPOINT,
 	PARENT_ATTENDANCE_ENDPOINT,
-	NEW_ENDPOINT,
+	API_URI_ROOT,
 } from '../utils/api';
 import {
 	parseHomePage,
@@ -48,10 +48,45 @@ const fetchStudentProfile = createAsyncThunk(
 		defaultPayloadCreator(data, thunkApi, PARENTS_ENDPOINT, parseHomePage),
 );
 
+async function schedulePayloadCreator(data, thunkApi, apiEndpoint, parser) {
+	const {getState, dispatch} = thunkApi;
+	const state = getState();
+	const cookie = _.get(state, 'auth.cookie');
+	let response;
+	if (data.weekNumber) {
+		const pageState = _.get(state, 'auth.pageState');
+		const postData = {
+			ctl00$mainContent$drpSelectWeek: String(data.weekNumber),
+			...pageState,
+			__EVENTTARGET: 'ctl00$mainContent$drpSelectWeek',
+		};
+		response = await axios.post(apiEndpoint, qs.stringify(postData), {
+			headers: {
+				Cookie: cookie,
+				'Content-Type': 'application/x-www-form-urlencoded',
+			},
+		});
+	} else {
+		response = await axios.get(apiEndpoint, {
+			headers: {
+				Cookie: cookie,
+			},
+		});
+	}
+
+	const html = response.data;
+	if (hasInvalidResponse(html)) {
+		dispatch(logout());
+		return null;
+	}
+	dispatch(updatePageState(extractPageState(html)));
+	return parser(html, data);
+}
+
 const fetchSchedule = createAsyncThunk(
 	'data/fetchSchedule',
 	async (data, thunkApi) =>
-		defaultPayloadCreator(
+		schedulePayloadCreator(
 			data,
 			thunkApi,
 			PARENT_SCHEDULE_ENDPOINT,
@@ -87,7 +122,7 @@ const fetchNewsDetails = createAsyncThunk(
 		defaultPayloadCreator(
 			data,
 			thunkApi,
-			`${NEW_ENDPOINT}?id=${data.id}`,
+			`${API_URI_ROOT}${data.url}`,
 			parseNewPage,
 		),
 );

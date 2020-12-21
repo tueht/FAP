@@ -10,12 +10,14 @@ const parseHomePage = (html) => {
 		studentNo: $('#ctl00_mainContent_lblRollNumber').text(),
 	};
 	const newElements = $('#ctl00_mainContent_divContent li');
+	// console.log('newElements', newElements);
 	let news = [];
 	newElements.each(function (index, value) {
 		news.push({
 			time: $('.date', value).text().replace('-', '').trim(),
 			title: $('a', value).text().trim(),
 			id: qs.parse($('a', value).attr('href').split('?')[1]).id,
+			url: $('a', value).attr('href'),
 		});
 	});
 	const schoolFeeAnn = $('#ctl00_mainContent_divhocphi').text();
@@ -69,7 +71,6 @@ const parseSchedulePage = (html) => {
 	const weekNumber = $(
 		'#ctl00_mainContent_drpSelectWeek option[selected="selected"]',
 	).attr('value');
-	// console.log(weekNumber, slots);
 	const startOfWeek = moment(weekNumber, 'w');
 	const days = Array(7)
 		.fill(0)
@@ -198,7 +199,7 @@ const parseAttendancePage = (html, params) => {
 
 const parseNewPage = (html, newItem) => {
 	let $ = cheerio.load(html);
-	const htmlText = $('#aspnetForm table').html();
+	const htmlText = $('#ctl00_mainContent_divContent').html();
 	return {
 		html: htmlText,
 		newItem,

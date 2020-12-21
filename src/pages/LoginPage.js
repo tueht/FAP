@@ -34,6 +34,11 @@ const LoginPage = () => {
 	const auth = useSelector((state) => state.auth);
 
 	function handleFormSubmit(values, {setSubmitting}) {
+		if (!values.password || !values.studentNo) {
+			Alert.alert('Lỗi', 'Nhập mật khẩu và mã sinh viên.');
+			setSubmitting(false);
+			return;
+		}
 		dispatch(
 			login({
 				password: values.password,
@@ -135,7 +140,7 @@ const LoginPage = () => {
 			keyboardShouldPersistTaps="handled">
 			<Formik
 				initialValues={{
-					campIndex: _.findIndex(CAMPS, {id: auth.campId}),
+					campIndex: auth.campId ? _.findIndex(CAMPS, {id: auth.campId}) : 0,
 					studentNo: auth.studentNo,
 					password: auth.password,
 					rememberMe: auth.rememberMe,
