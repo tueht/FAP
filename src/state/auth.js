@@ -25,9 +25,14 @@ export function extractPageState(html) {
 // 	return $('#ctl00_mainContent_lblError').text().trim();
 // }
 
+function sleep(ms) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function isValidAuthStatus(html, studentNo) {
 	let $ = cheerio.load(html);
 	const errorMessage = $('#ctl00_mainContent_lblError').text().trim();
+	console.log('errorMessage', errorMessage, $('#ctl00_lblLogIn').text().trim());
 	return (
 		errorMessage?.includes('System.NullReferenceException: Object reference') ||
 		$('#ctl00_lblLogIn').text().trim() === studentNo
@@ -41,7 +46,7 @@ const login = createAsyncThunk('auth/login', async (userInfo, thunkAPI) => {
 		ctl00$mainContent$txtUser: userInfo.studentNo,
 		ctl00$mainContent$txtPass: userInfo.password,
 		ctl00$mainContent$btLogin: 'Đăng nhập',
-		// ctl00$mainContent$chkRemember: true,
+		// ctl00$mainContent$chkRemember: false,
 	};
 	return fetch(LOGIN_ENDPOINT, {
 		headers: defaultHeaders,
@@ -52,6 +57,7 @@ const login = createAsyncThunk('auth/login', async (userInfo, thunkAPI) => {
 				...extractPageState(await loginPage.text()),
 				...postUserInfo,
 			};
+			await sleep(500);
 			const cookie = setCookie.parse(
 				setCookie.splitCookiesString(loginPage.headers.map['set-cookie']),
 			)[0];
@@ -63,27 +69,10 @@ const login = createAsyncThunk('auth/login', async (userInfo, thunkAPI) => {
 				},
 			});
 		})
-		.then((loginPage) => {
-			const html = loginPage.data;
-			if (!isValidAuthStatus(html, userInfo.studentNo)) {
-				throw new Error(
-					`Sai cơ sở, mã sinh viên hoặc mật khẩu, vui lòng thử lại.`,
-				);
-			}
-			const formData = {
-				...extractPageState(html),
-				...postUserInfo,
-			};
-			return axios.post(LOGIN_ENDPOINT, qs.stringify(formData), {
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded',
-					Cookie,
-				},
-			});
-		})
 		.then(async (loginPage) => {
 			const html = loginPage.data;
 			if (!isValidAuthStatus(html, userInfo.studentNo)) {
+				console.log('throw here');
 				throw new Error(
 					`Sai cơ sở, mã sinh viên hoặc mật khẩu, vui lòng thử lại.`,
 				);
@@ -91,7 +80,9 @@ const login = createAsyncThunk('auth/login', async (userInfo, thunkAPI) => {
 			const formData = {
 				...extractPageState(html),
 				...postUserInfo,
+				__EVENTTARGET: 'ctl00$mainContent$dllCampus',
 			};
+			await sleep(500);
 			await axios.post(LOGIN_ENDPOINT, qs.stringify(formData), {
 				headers: {
 					'Content-Type': 'application/x-www-form-urlencoded',

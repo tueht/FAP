@@ -6,6 +6,7 @@ import Ripple from 'react-native-material-ripple';
 
 import PageLoadingComponent from '../components/PageLoadingComponent';
 import {fetchStudentProfile} from '../state/data';
+import {logout} from '../state/auth';
 import sharedStyles from '../styles';
 import HeaderAboutButton from '../components/HeaderAboutButton';
 
@@ -15,6 +16,7 @@ const HomePage = ({navigation}) => {
 
 	useEffect(() => {
 		dispatch(fetchStudentProfile());
+		// dispatch(logout());
 	}, [dispatch]);
 
 	useLayoutEffect(() => {
@@ -95,7 +97,12 @@ const HomePage = ({navigation}) => {
 		},
 	];
 
-	const renderProfileRow = (profile) => {
+	const renderProfileRow = (profilex) => {
+		const profile = {
+			name: 'Hoàng Trọng Tuệ',
+			dob: '01/01/2000',
+			studentNo: 'HE12345678',
+		};
 		return (
 			<View style={[sharedStyles.card, styles.profileContainer, styles.row]}>
 				<View style={styles.profileRow}>

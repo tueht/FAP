@@ -20,7 +20,8 @@ const parseHomePage = (html) => {
 			url: $('a', value).attr('href'),
 		});
 	});
-	const schoolFeeAnn = $('#ctl00_mainContent_divhocphi').text();
+	// console.log('newElements', news);
+	const schoolFeeAnn = $('#ctl00_mainContent_divhocphi').text().trim();
 	return {
 		student,
 		news,

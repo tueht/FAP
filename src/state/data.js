@@ -22,18 +22,28 @@ import {
 	parseNewPage,
 } from '../utils/appParsers';
 
+function sleep(ms) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
 const hasInvalidResponse = (html) => html.includes('Mật khẩu');
 
 async function defaultPayloadCreator(data, thunkApi, apiEndpoint, parser) {
 	const {getState, dispatch} = thunkApi;
 	const state = getState();
 	const cookie = _.get(state, 'auth.cookie');
-	const response = await axios.get(apiEndpoint, {
+	let response = await axios.get(apiEndpoint, {
 		headers: {
 			Cookie: cookie,
 		},
 	});
-
+	if (!hasInvalidResponse(response.data)) {
+		await sleep(200);
+		response = await axios.get(apiEndpoint, {
+			headers: {
+				Cookie: cookie,
+			},
+		});
+	}
 	const html = response.data;
 	if (hasInvalidResponse(html)) {
 		dispatch(logout());
