@@ -1,27 +1,9 @@
-import React, {useEffect} from 'react';
-import {useSelector, useDispatch} from 'react-redux';
+import React from 'react';
 import _ from 'lodash';
 import {WebView} from 'react-native-webview';
 
-import PageLoadingComponent from '../components/PageLoadingComponent';
-
-import {fetchNewsDetails} from '../state/data';
-
 const NewPage = ({route}) => {
-	const dispatch = useDispatch();
 	const {newItem} = route.params;
-
-	const {html, loading} = useSelector((state) =>
-		_.find(_.get(state, 'data.news'), {id: newItem.id}),
-	);
-
-	useEffect(() => {
-		dispatch(fetchNewsDetails(newItem));
-	}, [newItem, dispatch]);
-
-	if (loading) {
-		return <PageLoadingComponent />;
-	}
 
 	const displayHtml = `
         <html>
@@ -30,7 +12,7 @@ const NewPage = ({route}) => {
             <style type="text/css">
                 .style1 {font-weight: bold;}
                 body {
-                    padding: 1.4rem;
+                    padding: 1.5rem;
                     font-size: 30px;
                     line-height: initial;
                 }
@@ -43,7 +25,7 @@ const NewPage = ({route}) => {
                 }
             </style>
             </head>
-            <body>${html || ''}</body>
+            <body>${_.unescape(newItem.content) || ''}</body>
         </html>
     `;
 	return <WebView source={{html: displayHtml}} />;

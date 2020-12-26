@@ -13,13 +13,18 @@ import produce from 'immer';
 
 import sharedStyles from '../styles';
 import PageLoadingComponent from '../components/PageLoadingComponent';
-import {fetchCoursesForSemester} from '../state/data';
+import {fetchGradesForSemester} from '../state/data';
 import locale from '../locale';
 
-const AttendancePage = ({navigation}) => {
+const SemesterGradesPage = ({navigation}) => {
 	const dispatch = useDispatch();
 	const [sectionOpened, setSectionOpened] = useState({});
 	const semesters = useSelector((state) => state.data.semesters || {});
+	const subjects = useSelector((state) => state.data.subjects || {});
+
+	const getSubjectName = (subjectCode) => {
+		return subjects[subjectCode]?.SubjectName || subjectCode;
+	};
 
 	const renderItem = ({item, section}) => {
 		if (item.CourseID === 'loading') {
@@ -29,7 +34,7 @@ const AttendancePage = ({navigation}) => {
 			<Ripple
 				style={[sharedStyles.card, styles.item]}
 				onPress={() => {
-					navigation.push('ClassAttendancePage', {
+					navigation.push('CourseGrades', {
 						course: item,
 						semester: section.name,
 					});
@@ -43,7 +48,7 @@ const AttendancePage = ({navigation}) => {
 							styles.rowText,
 							{flex: 1, textAlign: 'right', paddingStart: 8},
 						]}>
-						{item.SubjectName}
+						{getSubjectName(item.SubjectCode)}
 					</Text>
 				</View>
 				<View style={[styles.rowContainer]}>
@@ -54,13 +59,13 @@ const AttendancePage = ({navigation}) => {
 				</View>
 				<View style={[styles.rowContainer]}>
 					<Text style={[styles.rowText, styles.label]}>
-						{locale.startDate}:
+						{locale.averageGrade}:
 					</Text>
-					<Text style={[styles.rowText]}>{item.StartDate}</Text>
+					<Text style={[styles.rowText]}>{item.AverageMark}</Text>
 				</View>
 				<View style={[styles.rowContainer]}>
-					<Text style={[styles.rowText, styles.label]}>{locale.endDate}:</Text>
-					<Text style={[styles.rowText]}>{item.EndDate}</Text>
+					<Text style={[styles.rowText, styles.label]}>{locale.status}:</Text>
+					<Text style={[styles.rowText]}>{item.Status}</Text>
 				</View>
 			</Ripple>
 		);
@@ -88,16 +93,16 @@ const AttendancePage = ({navigation}) => {
 
 	const toggleSection = useCallback(
 		(section) => {
-			const {title, courses = {loading: false, data: []}} = section;
+			const {title, grades = {loading: false, data: []}} = section;
 			LayoutAnimation.easeInEaseOut();
 			setSectionOpened(
 				produce(sectionOpened, (draft) => {
 					draft[title] = !draft[title];
 				}),
 			);
-			if (!courses.loading && courses.data?.length === 0) {
+			if (!grades.loading && grades.data?.length === 0) {
 				dispatch(
-					fetchCoursesForSemester({
+					fetchGradesForSemester({
 						semester: section.name,
 					}),
 				);
@@ -136,9 +141,9 @@ const AttendancePage = ({navigation}) => {
 		return semestersData.map((item) => {
 			let data = [];
 			if (sectionOpened[item.name]) {
-				data = item.courses?.loading
+				data = item.grades?.loading
 					? [{CourseID: 'loading'}]
-					: item.courses?.data || [];
+					: item.grades?.data || [];
 			}
 			return {
 				...item,
@@ -211,4 +216,4 @@ const styles = StyleSheet.create({
 	},
 });
 
-export default AttendancePage;
+export default SemesterGradesPage;

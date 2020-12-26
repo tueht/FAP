@@ -1,5 +1,11 @@
-import React from 'react';
-import {View, StyleSheet, ScrollView, Alert} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {
+	View,
+	StyleSheet,
+	ScrollView,
+	Alert,
+	ActivityIndicator,
+} from 'react-native';
 import {Text, Input, Button, Icon, CheckBox} from 'react-native-elements';
 import {Dropdown} from 'react-native-material-dropdown-v2';
 
@@ -8,49 +14,50 @@ import {Formik} from 'formik';
 import _ from 'lodash';
 
 import {login} from '../state/auth';
+import {getAllCampus} from '../state/data';
 import sharedStyles from '../styles';
 import AboutComponent from '../components/AboutComponent';
+import locale from '../locale';
 
-const CAMPS = [
-	{
-		value: 'FU-Hoà Lạc',
-		id: 3,
-	},
-	{
-		value: 'FU-Hồ Chí Minh',
-		id: 4,
-	},
-	{
-		value: 'FU-Đà Nẵng',
-		id: 5,
-	},
-	{
-		value: 'FU-Cần Thơ',
-		id: 6,
-	},
-];
 const LoginPage = () => {
 	const dispatch = useDispatch();
 	const auth = useSelector((state) => state.auth);
+	const [loading, setLoading] = useState(true);
+	const [campuses, setCampuses] = useState([]);
+
+	useEffect(() => {
+		getAllCampus()
+			.then((data) => {
+				setCampuses(
+					data.map((item) => ({
+						id: item.CampusCode,
+						value: item.CampusName,
+					})),
+				);
+			})
+			.finally(() => {
+				setLoading(false);
+			});
+	}, []);
 
 	function handleFormSubmit(values, {setSubmitting}) {
-		if (!values.password || !values.studentNo) {
-			Alert.alert('Lỗi', 'Nhập mật khẩu và mã sinh viên.');
+		if (!values.password || !values.userName) {
+			Alert.alert(locale.error, locale.studentNoAndPasswordErr);
 			setSubmitting(false);
 			return;
 		}
 		dispatch(
 			login({
 				password: values.password,
-				studentNo: values.studentNo,
-				campId: CAMPS[values.campIndex].id,
+				userName: values.userName,
+				campusCode: campuses[values.campusIndex].id,
 				rememberMe: values.rememberMe,
 			}),
 		).then((response) => {
 			setSubmitting(false);
 			const errorMessage = _.get(response, 'error.message');
 			if (errorMessage) {
-				Alert.alert('Lỗi', errorMessage);
+				Alert.alert(locale.error, errorMessage);
 			}
 		});
 	}
@@ -66,17 +73,17 @@ const LoginPage = () => {
 			isSubmitting,
 		} = formikBag;
 		const campName =
-			(typeof values.campIndex === 'number' &&
-				_.get(CAMPS, `[${values.campIndex}].value`)) ||
-			'Chọn cơ sở đào tạo';
+			(typeof values.campusIndex === 'number' &&
+				_.get(campuses, `[${values.campusIndex}].value`)) ||
+			locale.selectCampus;
 		return (
 			<View>
 				<Dropdown
-					data={CAMPS}
+					data={campuses}
 					dropdownPosition={1}
 					fontSize={20}
 					onChangeText={(v, index) => {
-						setFieldValue('campIndex', index);
+						setFieldValue('campusIndex', index);
 					}}
 					renderBase={() => (
 						<View style={{marginBottom: 16}}>
@@ -86,25 +93,25 @@ const LoginPage = () => {
 								<Icon type="antdesign" name="down" size={18} color="#666" />
 							</View>
 							<View style={sharedStyles.dropdownDivider} />
-							{errors.campIndex && (
-								<Text style={{color: 'red'}}>{errors.campIndex}</Text>
+							{errors.campusIndex && (
+								<Text style={{color: 'red'}}>{errors.campusIndex}</Text>
 							)}
 						</View>
 					)}
 				/>
 				<Input
-					placeholder="Mã số sinh viên +"
+					placeholder={locale.userName}
 					leftIcon={{type: 'antdesign', name: 'user'}}
-					value={values.studentNo}
-					onChangeText={handleChange('studentNo')}
-					onBlur={handleBlur('studentNo')}
+					value={values.userName}
+					onChangeText={handleChange('userName')}
+					onBlur={handleBlur('userName')}
 					errorStyle={{color: 'red'}}
-					errorMessage={errors.studentNo}
+					errorMessage={errors.userName}
 					autoCapitalize="none"
 				/>
 
 				<Input
-					placeholder="Mật khẩu"
+					placeholder={locale.password}
 					leftIcon={{type: 'antdesign', name: 'key'}}
 					secureTextEntry={true}
 					value={values.password}
@@ -114,7 +121,7 @@ const LoginPage = () => {
 					errorMessage={errors.password}
 				/>
 				<CheckBox
-					title="Nhớ mật khẩu"
+					title={locale.rememberMe}
 					checked={values.rememberMe}
 					onPress={() => {
 						setFieldValue('rememberMe', !values.rememberMe);
@@ -126,7 +133,7 @@ const LoginPage = () => {
 				<View style={styles.loginContainer}>
 					<Button
 						loading={isSubmitting}
-						title="Đăng nhập"
+						title={locale.login}
 						onPress={handleSubmit}
 					/>
 				</View>
@@ -134,20 +141,35 @@ const LoginPage = () => {
 		);
 	}
 
-	return (
-		<ScrollView
-			contentContainerStyle={[styles.container]}
-			keyboardShouldPersistTaps="handled">
+	const renderFormContainer = () => {
+		if (loading) {
+			return (
+				<View style={[styles.loadingContainer]}>
+					<ActivityIndicator />
+				</View>
+			);
+		}
+		return (
 			<Formik
 				initialValues={{
-					campIndex: auth.campId ? _.findIndex(CAMPS, {id: auth.campId}) : 0,
-					studentNo: auth.studentNo,
+					campusIndex: auth.campusCode
+						? _.findIndex(campuses, {id: auth.campusCode})
+						: 0,
+					userName: auth.userName,
 					password: auth.password,
 					rememberMe: auth.rememberMe,
 				}}
 				onSubmit={handleFormSubmit}>
 				{renderForm}
 			</Formik>
+		);
+	};
+
+	return (
+		<ScrollView
+			contentContainerStyle={[styles.container]}
+			keyboardShouldPersistTaps="handled">
+			{renderFormContainer()}
 
 			<AboutComponent style={{marginTop: 22}} />
 		</ScrollView>
@@ -174,6 +196,10 @@ const styles = StyleSheet.create({
 	},
 	loginContainer: {
 		marginTop: 16,
+	},
+	loadingContainer: {
+		minHeight: 200,
+		justifyContent: 'center',
 	},
 });
 

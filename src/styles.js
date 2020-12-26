@@ -43,6 +43,12 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
+	px: {paddingHorizontal: 8},
+	py: {paddingVertical: 8},
+	px2: {paddingHorizontal: 16},
+	py2: {paddingVertical: 16},
+	px3: {paddingHorizontal: 24},
+	py3: {paddingVertical: 24},
 });
 
 export default styles;

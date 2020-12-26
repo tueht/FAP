@@ -1,196 +1,169 @@
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import _ from 'lodash';
 import qs from 'qs';
+import moment from 'moment';
 
 import axios from '../utils/axios';
-import {logout, updatePageState, extractPageState} from './auth';
+import {logout} from './auth';
 
-import {
-	PARENTS_ENDPOINT,
-	PARENT_SCHEDULE_ENDPOINT,
-	PARENT_TUITION_FEE_ENDPOINT,
-	PARENT_TOTAL_TRANSCRIPT_ENDPOINT,
-	PARENT_ATTENDANCE_ENDPOINT,
-	API_URI_ROOT,
-} from '../utils/api';
-import {
-	parseHomePage,
-	parseSchedulePage,
-	parseTuitionFeePage,
-	parseTotalTranscriptPage,
-	parseAttendancePage,
-	parseNewPage,
-} from '../utils/appParsers';
+import * as API from '../utils/api';
+import {parseGradePage} from '../utils/appParsers';
 
-function sleep(ms) {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
-const hasInvalidResponse = (html) => html.includes('Mật khẩu');
-
-async function defaultPayloadCreator(data, thunkApi, apiEndpoint, parser) {
-	const {getState, dispatch} = thunkApi;
+async function fetchData(passInParams = {}, thunkApi, apiEndpoint) {
+	const {getState} = thunkApi;
 	const state = getState();
-	const cookie = _.get(state, 'auth.cookie');
-	let response = await axios.get(apiEndpoint, {
-		headers: {
-			Cookie: cookie,
-		},
-	});
-	if (!hasInvalidResponse(response.data)) {
-		await sleep(200);
-		response = await axios.get(apiEndpoint, {
-			headers: {
-				Cookie: cookie,
-			},
-		});
-	}
-	const html = response.data;
-	if (hasInvalidResponse(html)) {
-		dispatch(logout());
-		return null;
-	}
-	return parser(html, data);
-}
-
-const fetchStudentProfile = createAsyncThunk(
-	'data/studentProfile',
-	async (data, thunkApi) =>
-		defaultPayloadCreator(data, thunkApi, PARENTS_ENDPOINT, parseHomePage),
-);
-
-async function schedulePayloadCreator(data, thunkApi, apiEndpoint, parser) {
-	const {getState, dispatch} = thunkApi;
-	const state = getState();
-	const cookie = _.get(state, 'auth.cookie');
-	let response;
-	if (data.weekNumber) {
-		const pageState = _.get(state, 'auth.pageState');
-		const postData = {
-			ctl00$mainContent$drpSelectWeek: String(data.weekNumber),
-			...pageState,
-			__EVENTTARGET: 'ctl00$mainContent$drpSelectWeek',
-		};
-		response = await axios.post(apiEndpoint, qs.stringify(postData), {
-			headers: {
-				Cookie: cookie,
-				'Content-Type': 'application/x-www-form-urlencoded',
-			},
-		});
-	} else {
-		response = await axios.get(apiEndpoint, {
-			headers: {
-				Cookie: cookie,
-			},
-		});
-	}
-
-	const html = response.data;
-	if (hasInvalidResponse(html)) {
-		dispatch(logout());
-		return null;
-	}
-	dispatch(updatePageState(extractPageState(html)));
-	return parser(html, data);
-}
-
-const fetchSchedule = createAsyncThunk(
-	'data/fetchSchedule',
-	async (data, thunkApi) =>
-		schedulePayloadCreator(
-			data,
-			thunkApi,
-			PARENT_SCHEDULE_ENDPOINT,
-			parseSchedulePage,
-		),
-);
-
-const fetchTuitionFee = createAsyncThunk(
-	'data/fetchTuitionFee',
-	async (data, thunkApi) =>
-		defaultPayloadCreator(
-			data,
-			thunkApi,
-			PARENT_TUITION_FEE_ENDPOINT,
-			parseTuitionFeePage,
-		),
-);
-
-const fetchTotalTranscripts = createAsyncThunk(
-	'data/fetchTotalTranscripts',
-	async (data, thunkApi) =>
-		defaultPayloadCreator(
-			data,
-			thunkApi,
-			PARENT_TOTAL_TRANSCRIPT_ENDPOINT,
-			parseTotalTranscriptPage,
-		),
-);
-
-const fetchNewsDetails = createAsyncThunk(
-	'data/fetchNewsDetails',
-	async (data, thunkApi) =>
-		defaultPayloadCreator(
-			data,
-			thunkApi,
-			`${API_URI_ROOT}${data.url}`,
-			parseNewPage,
-		),
-);
-
-// attendance
-async function attendancePayloadCreator(
-	data = {},
-	thunkApi,
-	apiEndpoint,
-	parser,
-) {
-	const {getState, dispatch} = thunkApi;
-	const state = getState();
-	const cookie = _.get(state, 'auth.cookie');
+	const auth = state.auth;
 	const params = {
-		id: _.get(state, 'data.student.studentNo'),
-		campus: _.get(state, 'auth.campId'),
+		campusCode: auth.campusCode,
+		authen: auth.authKey,
+		studentCode: auth.studentNo,
+		rollNumber: auth.studentNo,
+		roll: auth.studentNo,
+		...passInParams,
 	};
-	if (data.termId) {
-		params.term = data.termId;
-	}
-	if (data.courseId) {
-		params.course = data.courseId;
-	}
-	const url = `${apiEndpoint}${qs.stringify(params, {addQueryPrefix: true})}`;
-	// console.log('url', url);
-	const response = await axios.get(url, {
-		headers: {
-			Cookie: cookie,
-		},
-	});
+	const response = await axios.get(
+		`${apiEndpoint}?${qs.stringify(params, {encode: false})}`,
+	);
 
-	const html = response.data;
-	if (hasInvalidResponse(html)) {
-		dispatch(logout());
-		return null;
-	}
-	return parser(html, data);
+	return response.data;
 }
 
-const fetchAttendance = createAsyncThunk(
-	'data/fetchAttendance',
-	async (data, thunkApi) =>
-		attendancePayloadCreator(
+function extractJSONFromXML(xml, fallback) {
+	const startIndex = xml.indexOf('<string xmlns="http://tempuri.org/">');
+	if (startIndex >= 0) {
+		const innerData = _.trim(
+			xml.substring(startIndex + 36, xml.length - 9),
+			'"\\',
+		);
+		try {
+			return JSON.parse(innerData);
+		} catch (error) {
+			try {
+				return JSON.parse(innerData.replace(/\\/g, ''));
+			} catch (e) {}
+			return innerData;
+		}
+	}
+	return fallback;
+}
+
+async function payloadCreator(data = {}, thunkApi, apiEndpoint) {
+	const response = await fetchData(data, thunkApi, apiEndpoint);
+	if (typeof response === 'string') {
+		const json = extractJSONFromXML(response);
+		if (json) {
+			if (json.status === 403) {
+				thunkApi.dispatch(logout());
+				throw new Error(json.error_message);
+			}
+			return json;
+		}
+	}
+	return response;
+}
+
+export const fetchSemesters = createAsyncThunk(
+	'data/fetchSemesters',
+	async (data, thunkApi) => {
+		const allSemesters = await payloadCreator(
 			data,
 			thunkApi,
-			PARENT_ATTENDANCE_ENDPOINT,
-			parseAttendancePage,
-		),
+			API.GET_SEMESTERS_ENDPOINT,
+		);
+		const attendedSemesters = await payloadCreator(
+			data,
+			thunkApi,
+			API.GET_ATTENDED_SEMESTERS_ENDPOINT,
+		);
+		const attendedSemesterNames = attendedSemesters.reduce((a, c) => {
+			a[c.SemesterName] = true;
+			return a;
+		}, {});
+		return allSemesters.filter(
+			(semester) =>
+				moment().isBefore(semester.EndDate) ||
+				attendedSemesterNames[semester.SemesterName],
+		);
+	},
+);
+
+export const fetchNews = createAsyncThunk(
+	'data/news',
+	async (data, thunkApi) => {
+		const {getState} = thunkApi;
+		const params = {
+			type: getState().auth.accountType === 'student' ? 1 : 4,
+		};
+		return payloadCreator(params, thunkApi, API.GET_NEWS_ENDPOINT);
+	},
+);
+
+export const fetchSubjects = createAsyncThunk(
+	'data/fetchSubjects',
+	async (data, thunkApi) =>
+		payloadCreator(data, thunkApi, API.GET_SUBJECTS_ENDPOINT),
+);
+
+export const fetchAttendances = createAsyncThunk(
+	'data/fetchAttendances',
+	async (data, thunkApi) =>
+		payloadCreator(data, thunkApi, API.GET_ATTENDANCES_ENDPOINT),
+);
+export const fetchInvoices = createAsyncThunk(
+	'data/fetchInvoices',
+	async (data, thunkApi) =>
+		payloadCreator(data, thunkApi, API.GET_INVOICES_ENDPOINT),
+);
+
+export const fetchCoursesForSemester = createAsyncThunk(
+	'data/fetchCoursesForSemester',
+	async (data, thunkApi) =>
+		payloadCreator(data, thunkApi, API.GET_COURSES_ENDPOINT),
+);
+
+export const fetchGradesForSemester = createAsyncThunk(
+	'data/fetchGradesForSemester',
+	async (data, thunkApi) =>
+		payloadCreator(data, thunkApi, API.GET_STUDENT_GRADES_ENDPOINT),
+);
+
+export const fetchCourseAttendances = createAsyncThunk(
+	'data/fetchCourseAttendances',
+	async (data, thunkApi) =>
+		payloadCreator(data, thunkApi, API.GET_COURSE_ATTENDANCES_ENDPOINT),
+);
+export const fetchTranscripts = createAsyncThunk(
+	'data/fetchTranscripts',
+	async (data, thunkApi) =>
+		payloadCreator(data, thunkApi, API.GET_TRANSCRIPTS_ENDPOINT),
+);
+
+export const fetchSemesterGrades = createAsyncThunk(
+	'data/fetchSemesterGrades',
+	async (data, thunkApi) =>
+		payloadCreator(data, thunkApi, API.GET_STUDENT_GRADES_ENDPOINT),
+);
+
+export const fetchCourseGrades = createAsyncThunk(
+	'data/fetchCourseGrades',
+	async (data, thunkApi) => {
+		const gradeHtml = await payloadCreator(
+			data,
+			thunkApi,
+			API.GET_COURSE_GRADES_ENDPOINT,
+		);
+		const parsedDAta = parseGradePage(_.unescape(gradeHtml));
+		return parsedDAta;
+	},
 );
 
 const initialState = {
-	student: {},
 	news: [],
-	schedule: {},
-	tuitionFee: {},
 	totalTranscripts: {},
 	attendance: {},
+	semesters: {},
+	subjects: {},
+	invoices: {},
 };
 const dataSlice = createSlice({
 	name: 'data',
@@ -201,100 +174,150 @@ const dataSlice = createSlice({
 			return initialState;
 		},
 
-		[fetchStudentProfile.pending]: (state, action) => {
-			state.student.loading = true;
-		},
-		[fetchStudentProfile.fulfilled]: (state, action) => {
-			// console.log('fullfiled', action.payload);
-			if (action.payload) {
-				state.student = action.payload.student;
-				state.news = action.payload.news;
-				state.schoolFeeAnn = action.payload.schoolFeeAnn;
+		[fetchSemesters.pending]: (state, action) => {
+			if (!state.semesters) {
+				state.semesters = {};
 			}
-			state.student.loading = false;
+			state.semesters.loading = true;
 		},
-		[fetchStudentProfile.rejected]: (state, action) => {
-			state.student.loading = false;
-		},
-
-		[fetchSchedule.pending]: (state, action) => {
-			state.schedule.loading = true;
-		},
-		[fetchSchedule.fulfilled]: (state, action) => {
+		[fetchSemesters.fulfilled]: (state, action) => {
 			if (action.payload) {
-				const {weekNumber, days} = action.payload;
-				state.schedule.activeWeek = weekNumber;
-				state.schedule[`${weekNumber}`] = days;
+				const semesters = action.payload
+					.map((item) => ({
+						startDate: item.StartDate,
+						endDate: item.EndDate,
+						termId: item.TermID,
+						name: item.SemesterName,
+					}))
+					.sort((a, b) => moment(a.startDate).isBefore(b.startDate));
+				state.semesters.data = semesters;
 			}
-			state.schedule.loading = false;
+			state.semesters.loading = false;
 		},
-		[fetchSchedule.rejected]: (state, action) => {
-			state.schedule.loading = false;
-		},
-
-		[fetchTuitionFee.pending]: (state, action) => {
-			state.tuitionFee.loading = true;
-		},
-		[fetchTuitionFee.fulfilled]: (state, action) => {
-			state.tuitionFee = {
-				loading: false,
-				data: action.payload || [],
-			};
-		},
-		[fetchTuitionFee.rejected]: (state, action) => {
-			state.tuitionFee.loading = false;
+		[fetchSemesters.rejected]: (state, action) => {
+			state.semesters.loading = false;
 		},
 
-		[fetchTotalTranscripts.pending]: (state, action) => {
-			state.totalTranscripts.loading = true;
+		[fetchNews.fulfilled]: (state, action) => {
+			const news = action.payload.map((item) => ({
+				id: item.NewsId,
+				title: item.Tittle,
+				content: item.Content,
+				createdAt: item.CreateDate,
+				expireDate: item.ExpireDate,
+				createdBy: item.CreateBy,
+				attachments: item.FileAttach,
+			}));
+			state.news = news;
 		},
-		[fetchTotalTranscripts.fulfilled]: (state, action) => {
-			state.totalTranscripts = {
-				loading: false,
-				data: action.payload || [],
-			};
-		},
-		[fetchTotalTranscripts.rejected]: (state, action) => {
-			state.totalTranscripts.loading = false;
+		[fetchSubjects.fulfilled]: (state, action) => {
+			state.subjects = action.payload.reduce((a, c) => {
+				a[c.SubjectCode] = c;
+				return a;
+			}, {});
 		},
 
-		[fetchAttendance.pending]: (state, action) => {
+		[fetchInvoices.pending]: (state, action) => {
+			if (!state.invoices) {
+				state.invoices = {};
+			}
+			state.invoices.loading = true;
+		},
+		[fetchInvoices.fulfilled]: (state, action) => {
+			state.invoices.data = action.payload.map((item) => ({
+				no: item.InvoiceNo,
+				semester: item.TermName,
+				createdAt: item.CreateDate,
+				invoiceDate: item.InvoiceDate,
+				amount: item.Amount,
+				note: item.Note,
+			}));
+			state.invoices.loading = false;
+		},
+		[fetchInvoices.rejected]: (state, action) => {
+			state.invoices.loading = false;
+		},
+
+		[fetchAttendances.pending]: (state, action) => {
 			state.attendance.loading = true;
 		},
-		[fetchAttendance.fulfilled]: (state, action) => {
+		[fetchAttendances.fulfilled]: (state, action) => {
+			const subjects = state.subjects;
 			state.attendance = {
 				loading: false,
-				data: action.payload || [],
+				data: action.payload.map((item) => ({
+					status: item.AttendanceStatus,
+					date: item.Date,
+					groupName: item.GroupName,
+					lecturer: item.Lecturer,
+					roomNo: item.RoomNo,
+					sessionNo: item.SessionNo,
+					slot: item.Slot,
+					slotTime: item.SlotTime,
+					subjectCode: item.SubjectCode,
+					subjectName:
+						subjects[item.SubjectCode]?.SubjectName || item.SubjectCode,
+				})),
 			};
 		},
-		[fetchAttendance.rejected]: (state, action) => {
+		[fetchAttendances.rejected]: (state, action) => {
 			state.attendance.loading = false;
 		},
 
-		[fetchNewsDetails.pending]: (state, action) => {
-			const currentItem = _.find(state.news, {id: action.meta.arg.id});
-			currentItem.loading = true;
+		[fetchCoursesForSemester.pending]: (state, action) => {
+			const semesterName = action.meta.arg.semester;
+			const semester = _.find(state.semesters.data, {name: semesterName});
+			if (!semester.courses) {
+				semester.courses = {};
+			}
+			semester.courses.loading = true;
 		},
-		[fetchNewsDetails.fulfilled]: (state, action) => {
-			const {html, newItem} = action.payload;
-			const currentItem = _.find(state.news, {id: newItem.id});
-			currentItem.html = html;
-			currentItem.loading = false;
+		[fetchCoursesForSemester.fulfilled]: (state, action) => {
+			const semesterName = action.meta.arg.semester;
+			const semester = _.find(state.semesters.data, {name: semesterName});
+			semester.courses = {
+				loading: false,
+				data: action.payload,
+			};
 		},
-		[fetchNewsDetails.rejected]: (state, action) => {
-			const currentItem = _.find(state.news, {id: action.meta.arg.id});
-			currentItem.loading = false;
+		[fetchCoursesForSemester.rejected]: (state, action) => {
+			const semesterName = action.meta.arg.semester;
+			const semester = _.find(state.semesters.data, {name: semesterName});
+			semester.courses = {
+				loading: false,
+			};
+		},
+
+		[fetchGradesForSemester.pending]: (state, action) => {
+			const semesterName = action.meta.arg.semester;
+			const semester = _.find(state.semesters.data, {name: semesterName});
+			if (!semester.grades) {
+				semester.grades = {};
+			}
+			semester.grades.loading = true;
+		},
+		[fetchGradesForSemester.fulfilled]: (state, action) => {
+			const semesterName = action.meta.arg.semester;
+			const semester = _.find(state.semesters.data, {name: semesterName});
+			semester.grades = {
+				loading: false,
+				data: action.payload,
+			};
+		},
+		[fetchGradesForSemester.rejected]: (state, action) => {
+			const semesterName = action.meta.arg.semester;
+			const semester = _.find(state.semesters.data, {name: semesterName});
+			semester.grades = {
+				loading: false,
+			};
 		},
 	},
 });
 
-export {
-	fetchStudentProfile,
-	fetchSchedule,
-	fetchTuitionFee,
-	fetchTotalTranscripts,
-	fetchAttendance,
-	fetchNewsDetails,
+export const getAllCampus = () => {
+	return axios.get(API.GET_CAMPUS_ENDPOINT).then((res) => {
+		return res.data.data;
+	});
 };
 
 export default dataSlice.reducer;

@@ -2,10 +2,10 @@ import React, {useEffect} from 'react';
 import {View, SectionList, StyleSheet, SafeAreaView} from 'react-native';
 import {Text} from 'react-native-elements';
 import {useSelector, useDispatch} from 'react-redux';
-
+import _ from 'lodash';
 import PageLoadingComponent from '../components/PageLoadingComponent';
 import sharedStyles from '../styles';
-import {fetchTotalTranscripts} from '../state/data';
+import {fetchTranscripts, fetchSemesterGrades} from '../state/data';
 
 const getStatusInfo = (status) => {
 	if (status.includes('Passed')) {
@@ -30,7 +30,9 @@ const TotalTranscriptPage = () => {
 	const dispatch = useDispatch();
 
 	useEffect(() => {
-		dispatch(fetchTotalTranscripts());
+		dispatch(fetchSemesterGrades()).then((action) => {
+			console.log(action.payload);
+		});
 	}, [dispatch]);
 
 	const totalTranscripts =

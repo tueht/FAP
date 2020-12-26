@@ -3,52 +3,51 @@ import {View, SectionList, StyleSheet} from 'react-native';
 import {Text, Icon} from 'react-native-elements';
 import {useSelector, useDispatch} from 'react-redux';
 import Ripple from 'react-native-material-ripple';
+import moment from 'moment';
 
-import PageLoadingComponent from '../components/PageLoadingComponent';
-import {fetchStudentProfile} from '../state/data';
+import {fetchSemesters, fetchNews, fetchSubjects} from '../state/data';
 import {logout} from '../state/auth';
 import sharedStyles from '../styles';
 import HeaderAboutButton from '../components/HeaderAboutButton';
+import HeaderLogoutButton from '../components/HeaderLogoutButton';
+
+import locale from '../locale';
 
 const HomePage = ({navigation}) => {
 	const dispatch = useDispatch();
-	const {student, news, schoolFeeAnn} = useSelector((state) => state.data);
+	const studentInfo = useSelector((state) => state.auth);
+	const {news} = useSelector((state) => state.data);
 
 	useEffect(() => {
-		dispatch(fetchStudentProfile());
-		// dispatch(logout());
+		dispatch(fetchNews());
+		dispatch(fetchSemesters());
+		dispatch(fetchSubjects());
 	}, [dispatch]);
 
 	useLayoutEffect(() => {
 		navigation.setOptions({
-			headerRight: () => <HeaderAboutButton />,
+			headerLeft: () => <HeaderAboutButton />,
+			headerRight: () => <HeaderLogoutButton />,
 		});
 	}, [navigation]);
 
-	if (student.loading) {
-		return <PageLoadingComponent numOfRows={3} />;
-	}
-
-	const newsData = schoolFeeAnn
-		? [{title: schoolFeeAnn, isSpecial: true}].concat(news)
-		: news;
 	const data = [
 		{
 			type: 'profile',
 			data: [
 				{
 					type: 'profile',
-					data: student,
+					data: studentInfo,
 				},
 			],
 		},
 		{
 			type: 'button',
-			title: 'Tra cứu',
+			title: locale.info,
 			data: [
 				{
 					type: 'Schedule',
-					label: 'Lịch học từng tuần',
+					label: locale.weeklySchedule,
 					icon: {
 						name: 'timetable',
 						type: 'material-community',
@@ -58,7 +57,7 @@ const HomePage = ({navigation}) => {
 				},
 				{
 					type: 'Attendance',
-					label: 'Số liệu điểm danh chi tiết từng môn',
+					label: locale.attendances,
 					icon: {
 						name: 'table-check',
 						type: 'material-community',
@@ -67,10 +66,9 @@ const HomePage = ({navigation}) => {
 					},
 				},
 				// {type: 'Transcript', label: 'Điểm chi tiết từng môn'},
-				// {type: 'PaymentStatus', label: 'Báo cáo tình trạng nộp tiền'},
 				{
-					type: 'TotalTranscript',
-					label: 'Bảng điểm quá trình học',
+					type: 'SemesterGrades',
+					label: locale.semesterGrades,
 					icon: {
 						name: 'table-account',
 						type: 'material-community',
@@ -80,7 +78,7 @@ const HomePage = ({navigation}) => {
 				},
 				{
 					type: 'TuitionFee',
-					label: 'Tra học phí kỳ',
+					label: locale.tuitionFee,
 					icon: {
 						name: 'money',
 						type: 'font-awesome',
@@ -91,30 +89,21 @@ const HomePage = ({navigation}) => {
 			],
 		},
 		{
-			title: 'Thông báo',
+			title: locale.news,
 			type: 'news',
-			data: newsData,
+			data: news,
 		},
 	];
 
-	const renderProfileRow = (profilex) => {
-		const profile = {
-			name: 'Hoàng Trọng Tuệ',
-			dob: '01/01/2000',
-			studentNo: 'HE12345678',
-		};
+	const renderProfileRow = (profile) => {
 		return (
 			<View style={[sharedStyles.card, styles.profileContainer, styles.row]}>
 				<View style={styles.profileRow}>
-					<Text style={[styles.profile]}>Sinh viên:</Text>
-					<Text style={[styles.profile]}>{profile.name}</Text>
+					<Text style={[styles.profile]}>{locale.studentName}:</Text>
+					<Text style={[styles.profile]}>{profile.studentName}</Text>
 				</View>
 				<View style={styles.profileRow}>
-					<Text style={[styles.profile]}>Ngày sinh:</Text>
-					<Text style={[styles.profile]}>{profile.dob}</Text>
-				</View>
-				<View style={styles.profileRow}>
-					<Text style={[styles.profile]}>Mã số sinh viên:</Text>
+					<Text style={[styles.profile]}>{locale.studentNumber}:</Text>
 					<Text style={[styles.profile]}>{profile.studentNo}</Text>
 				</View>
 			</View>
@@ -163,7 +152,11 @@ const HomePage = ({navigation}) => {
 				<Text style={[item.isSpecial ? styles.specialNew : styles.newText]}>
 					{item.title}
 				</Text>
-				{!!item.time && <Text style={[styles.newTime]}>{item.time}</Text>}
+				{!!item.createdAt && (
+					<Text style={[styles.newTime]}>
+						{moment(item.createdAt).fromNow()}
+					</Text>
+				)}
 			</Component>
 		);
 	};
@@ -182,7 +175,9 @@ const HomePage = ({navigation}) => {
 	return (
 		<SectionList
 			sections={data}
-			keyExtractor={(item, index) => (item.label || item.title) + index}
+			keyExtractor={(item, index) =>
+				(item.id || item.label || item.title) + index
+			}
 			renderItem={renderItem}
 			renderSectionHeader={renderSectionHeader}
 			renderSectionFooter={renderNoContent}

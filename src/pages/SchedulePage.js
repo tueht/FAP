@@ -1,5 +1,11 @@
 import React, {useEffect, useLayoutEffect, useState} from 'react';
-import {View, SectionList, StyleSheet, SafeAreaView} from 'react-native';
+import {
+	View,
+	SectionList,
+	StyleSheet,
+	SafeAreaView,
+	ActivityIndicator,
+} from 'react-native';
 import {Text, Button} from 'react-native-elements';
 import {useSelector, useDispatch} from 'react-redux';
 import moment from 'moment';
@@ -9,9 +15,10 @@ import {Calendar, LocaleConfig} from 'react-native-calendars';
 
 import PageLoadingComponent from '../components/PageLoadingComponent';
 import sharedStyles from '../styles';
-import {fetchSchedule} from '../state/data';
+import {fetchAttendances} from '../state/data';
+import locale from '../locale';
 
-LocaleConfig.locales['vi'] = {
+LocaleConfig.locales.vi = {
 	monthNames: [
 		'Tháng 1',
 		'Tháng 2',
@@ -44,36 +51,59 @@ LocaleConfig.locales['vi'] = {
 	dayNamesShort: ['CN.', 'T2.', 'T3.', 'T4.', 'T5.', 'T6.', 'T7.'],
 	today: 'Hôm nay',
 };
-LocaleConfig.defaultLocale = 'vi';
 
 const getStatusStyle = (status) => {
-	if (status === 'Vắng mặt') {
+	if (status === 'A') {
 		return {
 			container: styles.absent,
+			text: locale.absent,
 		};
 	}
-	if (status === 'Đã điểm danh') {
+	if (status === 'P') {
 		return {
 			container: styles.present,
+			text: locale.present,
 		};
 	}
 	return {
 		container: styles.notTaken,
+		text: locale.notTaken,
 	};
 };
 const SchedulePage = ({navigation}) => {
 	const dispatch = useDispatch();
 	const [selectedDate, setSelectedDate] = useState(moment());
 	const [calendarVisible, setCalendarVisible] = useState(false);
-	const schedule = useSelector((state) => state.data.schedule) || {};
+	const {data: attendanceData = [], loading = false} = useSelector(
+		(state) => state.data.attendance || {},
+	);
+	const {data: semesterData} = useSelector(
+		(state) => state.data.semesters || {},
+	);
 
-	const scheduleData = schedule[schedule.activeWeek] || [];
 	useEffect(() => {
-		const params = selectedDate.isSame(moment(), 'day')
-			? {}
-			: {weekNumber: selectedDate.format('w')};
-		dispatch(fetchSchedule(params));
-	}, [dispatch, selectedDate]);
+		const semester = _.find(semesterData, (item) =>
+			moment().isAfter(item.startDate),
+		);
+		dispatch(
+			fetchAttendances({
+				semester: semester.name,
+			}),
+		);
+	}, [dispatch, semesterData]);
+
+	const data = React.useMemo(() => {
+		const attendanceWeek = _.groupBy(
+			attendanceData.filter((item) => selectedDate.isSame(item.date, 'w')),
+			'date',
+		);
+		return Object.keys(attendanceWeek).map((date) => {
+			return {
+				title: _.capitalize(moment(date).format('dddd, DD/MM')),
+				data: attendanceWeek[date],
+			};
+		});
+	}, [selectedDate, attendanceData]);
 
 	useLayoutEffect(() => {
 		navigation.setOptions({
@@ -92,51 +122,53 @@ const SchedulePage = ({navigation}) => {
 			),
 			headerTitle: () => (
 				<View style={styles.headerContainer}>
-					<Text style={[styles.headerTitle]}>Lịch học từng tuần</Text>
-					<Text style={[styles.subtitle]}>Tuần {selectedDate.format('w')}</Text>
+					<Text style={[styles.headerTitle]}>{locale.weeklySchedule}</Text>
+					<Text style={[styles.subtitle]}>
+						{locale.week} {selectedDate.format('w')}
+					</Text>
 				</View>
 			),
 		});
 	}, [navigation, setCalendarVisible, selectedDate]);
 
-	if (schedule.loading) {
+	if (loading && data.length === 0) {
 		return <PageLoadingComponent numOfRows={2} />;
 	}
-
-	const data = scheduleData.map((day) => {
-		return {
-			title: _.capitalize(moment(day.date).format('dddd, DD/MM')),
-			data: day.slots.filter((item) => !!item.subject),
-		};
-	});
 
 	const renderItem = ({item, section}) => {
 		const statusStyles = getStatusStyle(item.status);
 		return (
 			<View style={[sharedStyles.card, styles.item]}>
 				<View style={styles.slotMeta}>
-					<Text style={[styles.slot]}>Tiết: {item.slot}</Text>
-					<Text style={[styles.subject]}>{item.subject}</Text>
+					<Text style={[styles.slot]}>
+						{locale.slot}: {item.slot} | {item.lecturer}
+					</Text>
+					<Text style={[styles.subject]}>
+						{item.subjectName} ({item.subjectCode})
+					</Text>
+					<Text style={[styles.subject]}>
+						{locale.room}: {item.roomNo}
+					</Text>
 				</View>
 				<View>
 					<View style={[sharedStyles.tag, statusStyles.container]}>
-						<Text>{item.status}</Text>
+						<Text>{statusStyles.text}</Text>
 					</View>
-					{!!item.time && <Text style={[styles.time]}>{item.time}</Text>}
+					{!!item.slotTime && (
+						<Text style={[styles.time]}>{item.slotTime}</Text>
+					)}
 				</View>
 			</View>
 		);
 	};
 	const renderNoContent = ({section}) => {
-		if (section.data.length === 0) {
-			return (
-				<View style={styles.emptySection}>
-					<Text style={[styles.emptyText]}>Không có tiết học nào</Text>
-				</View>
-			);
-		}
-		return <View style={{height: 16}} />;
+		return (
+			<View style={styles.emptySection}>
+				<Text style={[styles.emptyText]}>{locale.noSlotMessage}</Text>
+			</View>
+		);
 	};
+
 	const renderCalendar = () => {
 		const startOfWeek = moment(selectedDate.format('w'), 'w');
 		const color = '#50cebb';
@@ -168,13 +200,19 @@ const SchedulePage = ({navigation}) => {
 			</View>
 		);
 	};
+
 	return (
 		<SafeAreaView style={styles.container}>
+			{loading && (
+				<View style={[sharedStyles.py3]}>
+					<ActivityIndicator />
+				</View>
+			)}
 			<SectionList
 				sections={data}
-				keyExtractor={(item, index) => item.subject + index}
+				keyExtractor={(item, index) => item.subjectCode + index}
 				renderItem={renderItem}
-				renderSectionFooter={renderNoContent}
+				ListEmptyComponent={renderNoContent}
 				renderSectionHeader={({section: {title}}) => (
 					<Text style={styles.header}>{title}</Text>
 				)}

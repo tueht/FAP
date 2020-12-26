@@ -4,6 +4,7 @@ import {Button, Text, Divider} from 'react-native-elements';
 import Modal from 'react-native-modal';
 
 import AboutComponent from './AboutComponent';
+import locale from '../locale';
 
 const HeaderAboutButton = () => {
 	const [modalVisible, setModalVisible] = useState(false);
@@ -31,10 +32,10 @@ const HeaderAboutButton = () => {
 					onBackButtonPress={toggleModal}
 					onBackdropPress={toggleModal}>
 					<View style={[styles.container]}>
-						<Text style={[styles.title]}>Thông tin</Text>
+						<Text style={[styles.title]}>{locale.information}</Text>
 						<Divider style={styles.divider} />
 						<AboutComponent style={styles.about} />
-						<Button title="Đóng" onPress={toggleModal} />
+						<Button title={locale.close} onPress={toggleModal} />
 					</View>
 				</Modal>
 			)}

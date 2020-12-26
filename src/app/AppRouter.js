@@ -11,14 +11,18 @@ import SchedulePage from '../pages/SchedulePage';
 import TuitionFeePage from '../pages/TuitionFeePage';
 import TotalTranscriptPage from '../pages/TotalTranscriptPage';
 import AttendancePage from '../pages/AttendancePage';
+import ClassAttendancePage from '../pages/ClassAttendancePage';
+import SemesterGradesPage from '../pages/SemesterGradesPage';
+import CourseGradesPage from '../pages/CourseGradesPage';
 import NewPage from '../pages/NewPage';
+import locale from '../locale';
 
 const Stack = createStackNavigator();
 
 require('moment/locale/vi');
 
 const AppRouter = () => {
-	const isLoggedIn = useSelector((state) => state.auth.cookie);
+	const isLoggedIn = useSelector((state) => state.auth.authKey);
 	return (
 		<NavigationContainer>
 			<Stack.Navigator>
@@ -32,34 +36,50 @@ const AppRouter = () => {
 						<Stack.Screen
 							name="Schedule"
 							component={SchedulePage}
-							options={{title: 'Lịch học từng tuần', headerBackTitle: ' '}}
+							options={{title: locale.weeklySchedule, headerBackTitle: ' '}}
 						/>
 						<Stack.Screen
 							name="TuitionFee"
 							component={TuitionFeePage}
-							options={{title: 'Tra học phí kỳ', headerBackTitle: ' '}}
+							options={{title: locale.tuitionFee, headerBackTitle: ' '}}
 						/>
 						<Stack.Screen
 							name="TotalTranscript"
 							component={TotalTranscriptPage}
-							options={{title: 'Bảng điểm quá trình học', headerBackTitle: ' '}}
+							options={{title: locale.semesterGrades, headerBackTitle: ' '}}
 						/>
 						<Stack.Screen
 							name="Attendance"
 							component={AttendancePage}
-							options={{title: 'Điểm danh chi tiết', headerBackTitle: ' '}}
+							options={{title: locale.attendanceDetails, headerBackTitle: ' '}}
+						/>
+						<Stack.Screen
+							name="ClassAttendancePage"
+							component={ClassAttendancePage}
+							options={{title: locale.attendance, headerBackTitle: ' '}}
+						/>
+
+						<Stack.Screen
+							name="SemesterGrades"
+							component={SemesterGradesPage}
+							options={{title: locale.grades, headerBackTitle: ' '}}
+						/>
+						<Stack.Screen
+							name="CourseGrades"
+							component={CourseGradesPage}
+							options={{title: locale.grades, headerBackTitle: ' '}}
 						/>
 						<Stack.Screen
 							name="New"
 							component={NewPage}
-							options={{title: 'Thông báo', headerBackTitle: ' '}}
+							options={{title: locale.news, headerBackTitle: ' '}}
 						/>
 					</>
 				) : (
 					<Stack.Screen
 						name="Auth"
 						component={LoginPage}
-						options={{title: 'Đăng Nhập'}}
+						options={{title: locale.login}}
 					/>
 				)}
 			</Stack.Navigator>
